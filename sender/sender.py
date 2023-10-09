@@ -39,7 +39,7 @@ receiver_email = environ['EMAIL']
 chatid = environ['CHATID']
 
 http_address = environ['HTTP_ADDRESS']
-http_port = environ['HTTP_PORT']
+port = environ['HTTP_PORT']
 
 
 config = {
@@ -158,11 +158,13 @@ def start_sender_bot():
         if find_db_user(message.from_user.username)[0] == False:
 
             # await bot.send_message(message.chat.id,f'Бот работает, chat_id={message.chat.id}')
-            await bot.send_message(message.chat.id,f'Приветстую {message.from_user.username} !\nК сожалению у Вас нет доступа к чат-боту поддержки.\nОбратитесь к системным администраторам.\nтел: 00-00-00')
+            await bot.send_message(message.chat.id,f'Приветстую {message.from_user.username} !\nК сожалению у Вас нет доступа к чат-боту поддержки.\nОбратитесь к системным администраторам.')
             
         else:
             db_username = find_db_user(message.from_user.username)[1]
-            await bot.send_message(message.from_user.id, text=f'Приветствую, {db_username} !\nЭто бот поддержки.\nВы можете отправить сюда свою задачу.\nИли ознакомиться с другми способами, для этого воспользуйтесь кнопкой HELP',reply_markup=hlp)
+            await bot.send_message(
+                message.from_user.id, 
+                text=f'Приветствую, {db_username} !\nЭто бот поддержки.\nОпишите важу задачу в тексте сообщения. Оставьте Вашь контактный нормерь или укажите иной способ обратной связи для сотрудника поддержки.\nВы так же можете отправить заявку через электронную почту или приложение этого воспользуйтесь кнопкой HELP',reply_markup=hlp)
 
     # /help
     @dp.message_handler(commands=['help1'])
@@ -183,7 +185,7 @@ def start_sender_bot():
     #/help
     @dp.callback_query_handler(text='help')
     async def help_btn(message: types.Message):
-        await bot.send_message(message.from_user.id, text=f'Инструкция по отправке заявки в поддержку.\nТУТ МНОГО ТЕКСТА И ВОЗМОЖНО КАРТИНКИ для пользователй',reply_markup=ticketMenu)
+        await bot.send_message(message.from_user.id, text=f'Выберите способ отправки нажав на нужную кнопку и проследуйте полученной инструкции.',reply_markup=ticketMenu)
        
 
     # check_access
@@ -209,12 +211,12 @@ def start_sender_bot():
 
     @dp.callback_query_handler(text="email_ticket")
     async def web_ticket_btn(message: types.Message):
-        await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную почту, отправьте вашу заявку в теле письма на электронный адрес glpi_support@intaro.email')
+        await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную почту, воспользуйтесь любым доступным почтовым клиентом или сервисом. Откройте новое сообщение, кратко(2-3 слова) опишите тему обращения в заголовке(Тема) письма. В теле письма развернуто опишите задачу и Ваши контактные данные.\nОтправьте сообщение на адрес glpi_support@intaro.email')
 
 
     @dp.callback_query_handler(text="web_ticket")
     async def email_ticket(message: types.Message):
-        await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную через личный кабинет,перейдите по адресу http://192.168.1.2:8002 . Пройдите авторизацию, перейдитите во вкладку заявки и нажимте на +, заполните поля и нажмите кнопку Добавить в нижней части экрана.')
+        await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную через личный кабинет,перейдите по адресу http://{http_address}:{port} . Пройдите авторизацию, перейдитите во вкладку заявки и нажимте на +, заполните поля и нажмите кнопку Добавить в нижней части экрана.')
 
 
     #others
