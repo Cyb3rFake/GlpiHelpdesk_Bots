@@ -119,10 +119,8 @@ def start_sender_bot():
     # start_time = datetime.datetime.now().strftime('%H:%M:%S')        
     start_time = datetime.datetime.now()  
         
-    
     async def on_startup(message: types.Message):
-        await bot.send_message(chat_id=chatid, text=f'Бот SENDER Онлайн!\nЗапущен : {start_time.strftime("%D в %Hч : %Mм : %Sс")}')
-
+        # await bot.send_message(chat_id=chatid, text=f'Бот SENDER Онлайн!\nЗапущен : {start_time.strftime("%D в %Hч : %Mм : %Sс")}')
         print(f'\n\n********* STATUS *********')
         print(f'SenderBot_STATUS: UP\nchat_id : {chatid}\nat: {start_time}\nStart time: {start_time.strftime("%D в %Hч : %Mм : %Sс")}')
         print(f'\n\n ********* END *********')
@@ -130,12 +128,9 @@ def start_sender_bot():
 
     async def on_shutdown(message: types.Message):
         finish_time = datetime.datetime.now()
-
         time_delta = finish_time - start_time
-
         time_format = time_delta.days, time_delta.seconds // 3600, (time_delta.seconds // 60) % 60, time_delta.seconds % 60
         
-
         year_days_hours_min_sec=f'{time_format[0]} годы\n{time_format[1]} дни\n{time_format[2]} минуты\n{time_format[3]} секунды'
 
         # await bot.send_message(chat_id=chatid, text=f'Бот SENDER Оффлайн!\nВыключен в: {finish_time.strftime("%D в %Hч : %Mм : %Sс")}\n--=Проработал=--\n{year_days_hours_min_sec}')
@@ -154,7 +149,6 @@ def start_sender_bot():
             server.starttls()
             server.login(smtp_login, smtp_password)
             server.send_message(msg)
-
 
 
     # /start
@@ -191,24 +185,26 @@ def start_sender_bot():
     async def help_btn(message: types.Message):
         await bot.send_message(message.from_user.id, text=f'Инструкция по отправке заявки в поддержку.\nТУТ МНОГО ТЕКСТА И ВОЗМОЖНО КАРТИНКИ для пользователй',reply_markup=ticketMenu)
        
-    #check_access
-    # @dp.message_handler(commands=['check_access'])
-    # async def check_telegram(message: types.Message):
-    #     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    #     chatid = message.chat.id
-    #     if find_db_user(message.from_user.username)[0]==True:
-    #         await bot.send_message(chat_id=chatid, text=f'Вам доступны заявки через телеграмм.')
-    #     else:
-    #         await bot.send_message(chat_id=chatid, text=f'Вам не доступны заявки через телеграмм.\nДля получения доступа отправьте запрос на почту: glpi_support@intaro.email\nили воспользуйтесь формой заявки по адресу: http://192.168.1.2:8002/')
+
+    # check_access
+    @dp.message_handler(commands=['check_access'])
+    async def check_telegram(message: types.Message):
+        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        chatid = message.chat.id
+        if find_db_user(message.from_user.username)[0]==True:
+            await bot.send_message(chat_id=chatid, text=f'Вам доступны заявки через телеграмм.')
+        else:
+            await bot.send_message(chat_id=chatid, text=f'Вам не доступны заявки через телеграмм.\nДля получения доступа отправьте запрос на почту: glpi_support@intaro.email\nили воспользуйтесь формой заявки по адресу: http://192.168.1.2:8002/')
 
 
-    # /chatid 
-    # @dp.message_handler(commands=['chatid'])
-    # async def chatid_command(message: types.Message):
 
-    #     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    #     chatid = message.chat.id
-    #     await bot.send_message(chat_id=chatid,text=f'CHAT ID : {chatid}')
+    # chatid 
+    @dp.message_handler(commands=['chatid'])
+    async def chatid_command(message: types.Message):
+
+        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        chatid = message.chat.id
+        await bot.send_message(chat_id=chatid,text=f'CHAT ID : {chatid}')
 
 
     @dp.callback_query_handler(text="email_ticket")
@@ -241,6 +237,11 @@ def start_sender_bot():
 
     # executor.start_polling(dp, skip_updates=True)
     # executor.start_polling(dp, skip_updates=True, on_shutdown=on_shutdown)
+
+    
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
     
+
+
+
 start_sender_bot()
