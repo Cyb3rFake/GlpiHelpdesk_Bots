@@ -149,7 +149,7 @@ def start_sender_bot():
             db_username = user_data[1]
             await bot.send_message(
                 message.from_user.id, 
-                text=f'Приветствую, {db_username} !\nЭто бот поддержки.\nОпишите вашу задачу в тексте сообщения и нажмите отправить. Оставьте Ваш контактный нормерь или укажите иной способ обратной связи для сотрудника поддержки.\nВы так же можете отправить заявку через электронную почту или приложение этого воспользуйтесь кнопкой HELP',reply_markup=hlp)
+                text=f'Приветствую, {db_username} !\nЭто бот поддержки.\nОпишите вашу задачу в тексте сообщения и нажмите отправить. Оставьте Ваш контактный нормер или укажите иной способ обратной связи для сотрудника поддержки.\nВы так же можете отправить заявку через электронную почту или приложение этого воспользуйтесь кнопкой HELP',reply_markup=hlp)
 
 
     #/help
@@ -202,7 +202,7 @@ def start_sender_bot():
     @dp.callback_query_handler(text="web_ticket")
     async def email_ticket(message: types.Message):
 
-        
+
         img_path = pathlib.Path(__file__).parent.resolve()
 
         login_img = InputFile(f'{img_path}/img/M_login.jpeg')
@@ -246,7 +246,7 @@ def start_sender_bot():
                 send_email(f'Задача от пользователя {first_name, subject} в {date}', message.text)
             await message.reply(f'Заявка успешно отправлена в поддержку.')
         else:
-            await message.reply(f'К сожалению Ваш телеграм аккаунт "{username}" не занесен в базу данных.\nДля отправки заявки в поддержку, воспользуйтесь веб-интерфейсом: http://{http_address}:{http_port}/\nили отправьте заявку на почту: glpi_support@intaro.email')
+            await message.reply(f'К сожалению Ваш телеграм аккаунт "{username}" не занесен в базу данных.\nДля отправки заявки в поддержку, воспользуйтесь веб-интерфейсом: http://{http_address}:{port}/\nили отправьте заявку на почту: glpi_support@intaro.email')
 
     executor.start_polling(dp, skip_updates=True)
     # executor.start_polling(dp, skip_updates=True, on_shutdown=on_shutdown)
