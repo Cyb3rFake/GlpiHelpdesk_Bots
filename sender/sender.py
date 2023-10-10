@@ -1,11 +1,16 @@
+import os
 import logging
 import mysql.connector
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InputFile
 import smtplib
 from email.mime.text import MIMEText
 import datetime
 from os import environ
 from dotenv import load_dotenv
+from time import sleep
+
+import pathlib
 
 from aiogram.types import InlineKeyboardButton as ikb, InlineKeyboardMarkup as ikm
 
@@ -55,74 +60,51 @@ print('Бот @Intaro_support_bot онлайн!')
 
 
 def find_db_user(username):
+
     try:
         # Подключение к базе данных
         cnx = mysql.connector.connect(**config)
         cursor = cnx.cursor()
     
-
+        # Получаем id пользователя из таблицы плагина telegrambot 
         query = "SELECT * FROM glpi_plugin_telegrambot_users gptu  WHERE username = %s"
         cursor.execute(query, (username,))
         result = cursor.fetchone()
-        telegram_db_user=result
-
-        # print("Пользователь найден!")
-        # print("ID:", result[0])
-        # print("USERNAME(TELEGRAM):", result[1])
-        # print("ID:", result[0])
-        # print("Имя пользователя:", result[1])
-        # print("Email:", result[2])
-
         if result:
-            query = "SELECT realname FROM glpi_users gptu  WHERE id = %s"
-            cursor.execute(query, (telegram_db_user[0],))
-            db_user_realname = cursor.fetchone()
-            return True,*db_user_realname
+            telegram_db_user_id=result[0],
         else:
+            return False
+
+
+        # Если запись существует возвращаем (True, Реальное имя пользователя, логи пользователя для GLPI)
+        if result:
+            query = "SELECT realname, name FROM glpi_users gptu  WHERE id = %s"
+            cursor.execute(query, (telegram_db_user_id))
+            result_1 = cursor.fetchone()
+            db_user_realname = result_1[0]
+            db_user_name = result_1[1]
+            
+            cursor.close()
+            cnx.close()
+            return True,db_user_realname,db_user_name
+        else:
+            cursor.close()
+            cnx.close()
             return False,0
         
     except mysql.connector.Error as err:
         return None,None,f"Ошибка при подключении к базе данных: {err}"
-    
-
-
-        #     # user_id = result[0]
-        #     # user_name = result[0]
-        #     return True, result
-        #     print("Пользователь найден!")
-        #     print("ID:", result[0])
-        #     # print("USERNAME(TELEGRAM):", result[1])
-        #     # print("ID:", result[0])
-        #     # print("Имя пользователя:", result[1])
-        #     # print("Email:", result[2])
-        # else:
-        #     return False, None
-        #     print("Пользователь не найден.")
-
         
-        query = "SELECT realname FROM glpi_users gptu  WHERE id = %s"
-        cursor.execute(query, (telegram_db_user[0],))
-        result = cursor.fetchone()
-
-        # print(*[i for i in result if not any[i==0,i==None,i=='']])
-        # print('REALNAME:',result[0])
-        # print('LOGIN_NAME:',result[1])
-        # print('DATE_CREATION:',result[2])
-        # print('CREATED IN:',result[1])
-
-
-        cursor.close()
-        cnx.close()
-
 
 def start_sender_bot():
     # start_time = datetime.datetime.now().strftime('%H:%M:%S')        
     start_time = datetime.datetime.now()  
-        
+       
+
     async def on_startup(message: types.Message):
         # await bot.send_message(chat_id=chatid, text=f'Бот SENDER Онлайн!\nЗапущен : {start_time.strftime("%D в %Hч : %Mм : %Sс")}')
         print(f'\n\n********* STATUS *********')
-        print(f'SenderBot_STATUS: UP\nchat_id : {chatid}\nat: {start_time}\nStart time: {start_time.strftime("%D в %Hч : %Mм : %Sс")}')
+        print(f'SenderBot_STATUS: UP\nchat_id : {chatid}\nStart time: {start_time.strftime("%D в %Hч : %Mм : %Sс")}')
         print(f'\n\n ********* END *********')
 
 
@@ -154,32 +136,20 @@ def start_sender_bot():
     # /start
     @dp.message_handler(commands=['start'])
     async def start_command(message: types.Message):
-        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        if find_db_user(message.from_user.username)[0] == False:
+        # await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        
+        user_data = find_db_user(message.from_user.username)
+
+        if user_data[0] == False :
 
             # await bot.send_message(message.chat.id,f'Бот работает, chat_id={message.chat.id}')
             await bot.send_message(message.chat.id,f'Приветстую {message.from_user.username} !\nК сожалению у Вас нет доступа к чат-боту поддержки.\nОбратитесь к системным администраторам.')
             
         else:
-            db_username = find_db_user(message.from_user.username)[1]
+            db_username = user_data[1]
             await bot.send_message(
                 message.from_user.id, 
-                text=f'Приветствую, {db_username} !\nЭто бот поддержки.\nОпишите важу задачу в тексте сообщения. Оставьте Вашь контактный нормерь или укажите иной способ обратной связи для сотрудника поддержки.\nВы так же можете отправить заявку через электронную почту или приложение этого воспользуйтесь кнопкой HELP',reply_markup=hlp)
-
-    # /help
-    @dp.message_handler(commands=['help1'])
-    async def start_command(message: types.Message):
-        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        chatid = message.chat.id
-        await bot.send_message(message.chat.id,f'Бот работает, chat_id={message.chat.id}')
-        await bot.send_message(chat_id=chatid,
-                text=f'Доступные комманды :\n\
-        /start : welcome message\n\
-        /chatid : получить id чата\n\
-        /check_access : проверить возможность отправки заявки\n\
-        /get_manual : инструкция по отправки заявки в поддержку\n\
-        /send_telegram_ticket : отправить сообщение в поддежку')
-
+                text=f'Приветствую, {db_username} !\nЭто бот поддержки.\nОпишите вашу задачу в тексте сообщения и нажмите отправить. Оставьте Ваш контактный нормерь или укажите иной способ обратной связи для сотрудника поддержки.\nВы так же можете отправить заявку через электронную почту или приложение этого воспользуйтесь кнопкой HELP',reply_markup=hlp)
 
 
     #/help
@@ -188,38 +158,79 @@ def start_sender_bot():
         await bot.send_message(message.from_user.id, text=f'Выберите способ отправки нажав на нужную кнопку и проследуйте полученной инструкции.',reply_markup=ticketMenu)
        
 
-    # check_access
-    @dp.message_handler(commands=['check_access'])
-    async def check_telegram(message: types.Message):
-        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        chatid = message.chat.id
-        if find_db_user(message.from_user.username)[0]==True:
-            await bot.send_message(chat_id=chatid, text=f'Вам доступны заявки через телеграмм.')
-        else:
-            await bot.send_message(chat_id=chatid, text=f'Вам не доступны заявки через телеграмм.\nДля получения доступа отправьте запрос на почту: glpi_support@intaro.email\nили воспользуйтесь формой заявки по адресу: http://192.168.1.2:8002/')
+    # # /list
+    # @dp.message_handler(commands=['list'])
+    # async def start_command(message: types.Message):
+    #     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    #     chatid = message.chat.id
+    #     await bot.send_message(message.chat.id,f'Бот работает, chat_id={message.chat.id}')
+    #     await bot.send_message(chat_id=chatid,
+    #             text=f'Доступные комманды :\n\
+    #     /start : welcome message\n\
+    #     /chatid : получить id чата\n\
+    #     /check_access : проверить возможность отправки заявки\n\
+    #     /get_manual : инструкция по отправки заявки в поддержку\n\
+    #     /send_telegram_ticket : отправить сообщение в поддежку')
 
 
 
-    # chatid 
-    @dp.message_handler(commands=['chatid'])
-    async def chatid_command(message: types.Message):
 
-        await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-        chatid = message.chat.id
-        await bot.send_message(chat_id=chatid,text=f'CHAT ID : {chatid}')
+    # # check_access
+    # @dp.message_handler(commands=['check_access'])
+    # async def check_telegram(message: types.Message):
+    #     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    #     chatid = message.chat.id
+    #     if find_db_user(message.from_user.username)[0]==True:
+    #         await bot.send_message(chat_id=chatid, text=f'Вам доступны заявки через телеграмм.')
+    #     else:
+    #         await bot.send_message(chat_id=chatid, text=f'Вам не доступны заявки через телеграмм.\nДля получения доступа отправьте запрос на почту: glpi_support@intaro.email\nили воспользуйтесь формой заявки по адресу: http://192.168.1.2:8002/')
 
+
+
+    # # chatid 
+    # @dp.message_handler(commands=['chatid'])
+    # async def chatid_command(message: types.Message):
+
+    #     await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+    #     chatid = message.chat.id
+    #     await bot.send_message(chat_id=chatid,text=f'CHAT ID : {chatid}')
 
     @dp.callback_query_handler(text="email_ticket")
     async def web_ticket_btn(message: types.Message):
         await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную почту, воспользуйтесь любым доступным почтовым клиентом или сервисом. Откройте новое сообщение, кратко(2-3 слова) опишите тему обращения в заголовке(Тема) письма. В теле письма развернуто опишите задачу и Ваши контактные данные.\nОтправьте сообщение на адрес glpi_support@intaro.email')
 
-
     @dp.callback_query_handler(text="web_ticket")
     async def email_ticket(message: types.Message):
-        await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную через личный кабинет,перейдите по адресу http://{http_address}:{port} . Пройдите авторизацию, перейдитите во вкладку заявки и нажимте на +, заполните поля и нажмите кнопку Добавить в нижней части экрана.')
+
+        
+        img_path = pathlib.Path(__file__).parent.resolve()
+
+        login_img = InputFile(f'{img_path}/img/M_login.jpeg')
+        settings_img = InputFile(f'{img_path}/img/M_Settings.jpeg')
+        change_pass_img = InputFile(f'{img_path}/img/M_changepass_1.jpeg')
+        exit_img = InputFile(f'{img_path}/img/M_exit.jpeg')
+        new_ticket_img =InputFile(f'{img_path}/img/M_newticket.jpeg')
+
+        await bot.send_message(message.from_user.id,text=f'Для отправки заявки через электронную через личный кабинет,перейдите по адресу http://{http_address}:{port}. \
+                               Пройдите авторизацию, если Вы делаете это впервые, Ваш логин будет {find_db_user(message.from_user.username)[2]} пароль будет 1234567890.')
+        await bot.send_photo(message.from_user.id, photo=login_img)
+        sleep(3)
+        await bot.send_message(message.from_user.id,text=f'Нажмите на заначек шестерни в правом верхнем углу и перейдите раздел настроек профиля.')
+        await bot.send_photo(message.from_user.id, photo=settings_img)
+        sleep(3)
+        await bot.send_message(message.from_user.id,text=f'Придумайте новый пароль и заполните поля "Пароль", "Подтверждение пароля".\nНажмите кнопку Сохранить в нижней части окна.')
+        await bot.send_photo(message.from_user.id, photo=change_pass_img)
+        sleep(3)
+        await bot.send_message(message.from_user.id,text=f'Перезайдите в личный кабинет с новым паролем, нажав на кнопку со стрелкой в верхнем правом углу')
+        await bot.send_photo(message.from_user.id, photo=exit_img)
+        sleep(3)
+        await bot.send_message(message.from_user.id,text=f'Заполните поля заголовок и описание, в заявке оставьте ваши контактные данные.\nНажмите кнопку подтвердить.\nВаша заявка отправлена в поддержку.\nОжидайте обратной связи.')
+        await bot.send_photo(message.from_user.id, photo=new_ticket_img)
 
 
-    #others
+
+
+    #mesasges to support
     @dp.message_handler()
     async def handle_message(message: types.Message):
         username = message.from_user.username
@@ -237,13 +248,19 @@ def start_sender_bot():
         else:
             await message.reply(f'К сожалению Ваш телеграм аккаунт "{username}" не занесен в базу данных.\nДля отправки заявки в поддержку, воспользуйтесь веб-интерфейсом: http://{http_address}:{http_port}/\nили отправьте заявку на почту: glpi_support@intaro.email')
 
-    # executor.start_polling(dp, skip_updates=True)
+    executor.start_polling(dp, skip_updates=True)
     # executor.start_polling(dp, skip_updates=True, on_shutdown=on_shutdown)
+    # executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
+    
 
-    
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
-    
+
+
 
 
 
 start_sender_bot()
+# print(find_db_user('Cyb3rfake'))
+# print(find_db_user('jopa'))
+
+# print(print(os.path.abspath(os.getcwd())))
+# print(print(os.path.abspath(__file__)))
